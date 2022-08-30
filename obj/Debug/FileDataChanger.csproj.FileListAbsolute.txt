@@ -1,0 +1,16 @@
+C:\Users\mrquackduckk\source\repos\FileDataChanger\bin\Debug\FileDataChanger.exe.config
+C:\Users\mrquackduckk\source\repos\FileDataChanger\bin\Debug\FileDataChanger.exe
+C:\Users\mrquackduckk\source\repos\FileDataChanger\bin\Debug\FileDataChanger.pdb
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.csproj.AssemblyReference.cache
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.csproj.SuggestedBindingRedirects.cache
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\MainWindow.g.cs
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\App.g.cs
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger_MarkupCompile.cache
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger_MarkupCompile.lref
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\MainWindow.baml
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.g.resources
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.Properties.Resources.resources
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.csproj.GenerateResource.cache
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.csproj.CoreCompileInputs.cache
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.exe
+C:\Users\mrquackduckk\source\repos\FileDataChanger\obj\Debug\FileDataChanger.pdb
