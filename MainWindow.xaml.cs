@@ -2,8 +2,9 @@
 using System;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
+using Microsoft.Win32;
 using System.Windows.Media;
+using System.Linq;
 
 namespace FileDataChanger
 {
@@ -12,15 +13,25 @@ namespace FileDataChanger
     /// </summary>
     public partial class MainWindow : Window
     {
-        private DateTime dateValue; // Date value selected in UI
-        private Microsoft.Win32.OpenFileDialog file; // File selected in UI
-        private VistaFolderBrowserDialog folder; // Folder selected in UI
+        #region Initialization
+
+        private DateTime dateValue; // Currently selected date
+        private OpenFileDialog file; // Currently selected file
+        private VistaFolderBrowserDialog folder; // Currently selected folder
 
         public MainWindow()
         {
+            // Setting up start values
+            dateValue = DateTime.Now;
             InitializeComponent();
             creationDateCheckBox.IsChecked = true;
-            ScaleWindow(1.10);
+            ScaleWindow(1.15);
+
+            // Centering the window relative to the screen
+            var screenHeight = SystemParameters.PrimaryScreenHeight;
+            var screenWidth = SystemParameters.PrimaryScreenWidth;
+            Top = (screenHeight - Height) / 2;
+            Left = (screenWidth - Width) / 2;
         }
 
         /// <summary>
@@ -32,160 +43,145 @@ namespace FileDataChanger
             MainContainer.LayoutTransform = new ScaleTransform(scaleSize, scaleSize, 0, 0);
             Width *= scaleSize;
             Height *= scaleSize;
-
-            // Center screen
-            var screenHeight = SystemParameters.PrimaryScreenHeight;
-            var screenWidth = SystemParameters.PrimaryScreenWidth;
-            Top = (screenHeight - Height) / 2;
-            Left = (screenWidth - Width) / 2;
         }
 
-        private void btnOpenFile(object sender, RoutedEventArgs e)
+        #endregion
+
+        #region Event Listeners
+
+        private void onOpenFileClicked(object sender, RoutedEventArgs e)
         {
-            Microsoft.Win32.OpenFileDialog fileDialog = new Microsoft.Win32.OpenFileDialog();
-            if (fileDialog.ShowDialog() == true)
-            {
-                file = fileDialog;
-                folder = null;
-                txtFileName.Text = fileDialog.SafeFileName;
-                txtDateCreated.Text = File.GetCreationTime(fileDialog.FileName).ToString();
-                txtDateModified.Text = File.GetLastWriteTime(fileDialog.FileName).ToString();
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            if (!(fileDialog.ShowDialog() ?? false)) return;
+            
+            file = fileDialog;
+            folder = null;
+            txtFileName.Text = fileDialog.SafeFileName;
+            txtDateCreated.Text = File.GetCreationTime(fileDialog.FileName).ToString();
+            txtDateModified.Text = File.GetLastWriteTime(fileDialog.FileName).ToString();
 
-                UnlockControls();
-            }
+            UnlockControls();
         }
 
-        private void btnOpenFolder(object sender, RoutedEventArgs e)
+        private void onOpenFolderClicked(object sender, RoutedEventArgs e)
         {
             var fileDialog = new VistaFolderBrowserDialog();
-            bool? result = fileDialog.ShowDialog();
-            if (result == true && !string.IsNullOrWhiteSpace(fileDialog.SelectedPath))
-            {
-                folder = fileDialog;
-                file = null;
-                string folderName = fileDialog.SelectedPath;
-                for (int i = 0; i <= 20; i++)
-                    folderName = folderName.Substring(folderName.IndexOf("\\") + 1);
+            bool result = fileDialog.ShowDialog() ?? false;
+            if (!result && string.IsNullOrWhiteSpace(fileDialog.SelectedPath)) return;
 
+            folder = fileDialog;
+            file = null;
+            string folderName = fileDialog.SelectedPath;
 
-                txtFileName.Text = folderName;
-                txtDateCreated.Text = Directory.GetCreationTime(fileDialog.SelectedPath).ToString();
-                txtDateModified.Text = Directory.GetLastWriteTime(fileDialog.SelectedPath).ToString();
+            // Remove path info (e.g: turn "C:/Program Files/Folder" into "/Folder")
+            folderName = folderName.Substring(folderName.LastIndexOf("\\")).Replace('\\', '/');
 
-                UnlockControls();
-            }
+            txtFileName.Text = folderName;
+            txtDateCreated.Text = Directory.GetCreationTime(fileDialog.SelectedPath).ToString();
+            txtDateModified.Text = Directory.GetLastWriteTime(fileDialog.SelectedPath).ToString();
+
+            UnlockControls();
         }
 
-        private void selectedDateChanged(object sender, SelectionChangedEventArgs e)
+        private void onApplyClicked(object sender, RoutedEventArgs e)
         {
-            btnApply.IsEnabled = true;
-            dateValue = selectDate.SelectedDate.Value;
+            if (folder != null) SetDate(EntityType.Folder);
+            else SetDate(EntityType.File);
         }
 
-        private void selectedTimeTextChanged(object sender, TextChangedEventArgs e)
+        private void onCreationDateButtonChecked(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                int hours = Int32.Parse(selectHours?.Text ?? "0");
-                int minutes = Int32.Parse(selectMinutes?.Text ?? "0");
-                int seconds = Int32.Parse(selectSeconds?.Text ?? "0");
-                TimeSpan currentTime = new TimeSpan(hours, minutes, seconds);
-                dateValue = dateValue.ChangeTime(currentTime.Hours, currentTime.Minutes, currentTime.Seconds);
-            }
-            catch
-            {
-                selectHours.Text = "00";
-                selectMinutes.Text = "00";
-                selectSeconds.Text = "00";
-            }
-        }
-
-        private void btnApplyClick(object sender, RoutedEventArgs e)
-        {
-            if (folder != null)
-            {
-                SetDate(EntityType.Folder);
-            }
-            else
-            {
-                SetDate(EntityType.File);
-            }
-        }
-
-        private void creationDateCheckBoxChecked(object sender, RoutedEventArgs e)
-        {
+            txtDateCreated.Opacity = 1;
+            txtDateModified.Opacity = 0.4;
             modifyDateCheckBox.IsChecked = false;
         }
 
-        private void modifyDateCheckBoxChecked(object sender, RoutedEventArgs e)
+        private void onModifiedDateButtonChecked(object sender, RoutedEventArgs e)
         {
+            txtDateCreated.Opacity = 0.4;
+            txtDateModified.Opacity = 1;
             creationDateCheckBox.IsChecked = false;
         }
 
+        private void dateAndTimeValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            var newDate = dateAndTime.Value.Value;
+            dateValue = newDate;
+        }
+
+        #endregion
+
+        #region Methods
+
         /// <summary>
-        /// Shows last modify and creation dates in UI
+        /// Updates "last modified" and "creation date" labels
         /// </summary>
         private void UpdateData()
         {
-            if (folder == null)
+            if (folder is null)
             {
                 txtDateCreated.Text = File.GetCreationTime(file.FileName).ToString();
                 txtDateModified.Text = File.GetLastWriteTime(file.FileName).ToString();
+                return;
             }
-            else
-            {
-                txtDateCreated.Text = Directory.GetCreationTime(folder.SelectedPath).ToString();
-                txtDateModified.Text = Directory.GetLastWriteTime(folder.SelectedPath).ToString();
-            }
+
+            txtDateCreated.Text = Directory.GetCreationTime(folder.SelectedPath).ToString();
+            txtDateModified.Text = Directory.GetLastWriteTime(folder.SelectedPath).ToString();
         }
 
         /// <summary>
-        /// Unlock buttons and fields
+        /// Unlocks buttons and fields
         /// </summary>
         private void UnlockControls()
         {
-            selectDate.IsEnabled = true;
-            selectHours.IsEnabled = true;
-            selectMinutes.IsEnabled = true;
-            selectSeconds.IsEnabled = true;
+            dateAndTime.IsReadOnly = false;
+            dateAndTime.Opacity = 1;
             creationDateCheckBox.IsEnabled = true;
             modifyDateCheckBox.IsEnabled = true;
             btnApply.IsEnabled = true;
         }
 
         /// <summary>
-        /// Sets last modify date or creation date
+        /// Sets last modified date or the creation date (depending on user's choice)
         /// </summary>
         /// <param name="type"></param>
         private void SetDate(EntityType type)
         {
-            if (type == EntityType.File)
+            if (type is EntityType.File)
             {
-                // Set file last modify time
-                if (modifyDateCheckBox.IsChecked == true)
-                    File.SetLastWriteTime(file.FileName, dateValue);
-                // Set file creation time
+                string filePath = file.FileName;
+                if (modifyDateCheckBox.IsChecked is true)
+                {
+                    File.SetLastWriteTime(filePath, dateValue);
+                }
                 else
-                    File.SetCreationTime(file.FileName, dateValue);
-                UpdateData();
+                {
+                    File.SetCreationTime(filePath, dateValue);
+                }
             }
-            else if (type == EntityType.Folder)
+            else if (type is EntityType.Folder)
             {
-                // Set folder last write time
-                if (modifyDateCheckBox.IsChecked == true)
-                    Directory.SetLastWriteTime(folder.SelectedPath, dateValue);
-                // Set folder creation time
+                string folderPath = folder.SelectedPath;
+                if (modifyDateCheckBox.IsChecked is true)
+                {
+                    Directory.SetLastWriteTime(folderPath, dateValue);
+                }
                 else
-                    Directory.SetCreationTime(folder.SelectedPath, dateValue);
-                UpdateData();
+                {
+                    Directory.SetCreationTime(folderPath, dateValue);
+                }
             }
+
+            UpdateData();
         }
 
-        enum EntityType
-        {
-            File,
-            Folder
-        }
+        #endregion
+    }
+
+    enum EntityType
+    {
+        File,
+        Folder
     }
 
     public static class DateTimeExtensions
